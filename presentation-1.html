@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+            
+        <title>Introduction to Sparsity  in Modeling and Learning</title>
+
+<!--
+Analyzing high-dimensional data is hard. In this short intervention, we will briefly discuss this “curse of dimensionality” and how it impact tasks such as data modeling and machine learning. We will remind the Ockham's razor principle that favors simpler models and see how this notion of simplicity can be re-formulated in terms of sparsity, compressibility and description length.
+-->
+
+        <meta name="author" content="Rémi Emonet">
+        <meta name="venue" content="Workshop on Sparsity">
+        <meta name="date" content="2016-02-11">
+        <meta name="affiliation" content="Université Jean Monnet  Laboratoire Hubert Curien">
+ 
+        <style type="text/css">
+.deck-container.black-bg { background: black !important; }
+.deck-container:not(.black-bg) { transition: 300ms ease-in background; background: default; }
+
+.title-slide h2, .title-slide ul {
+   box-shadow: 0px 0px 20px rgba(255,255,255, 0.8);
+}
+.fancy-slide h2, .fancy-slide ul {
+   color: white;
+}
+.fancy-slide ul {
+   padding: 0.5em; background: rgba(0,0,0,0.8);
+   border-radius: 3px;
+   list-style: none !important;
+}
+.fancy-slide.bot ul {
+   position: absolute; left: 20px; bottom: 20px; margin:0;
+}
+.fancy-slide.top ul {
+   position: absolute; right: 20px; top: 20px; margin:0;
+}
+.title-slide ul {
+   position: absolute; right: 30px; left: auto; bottom: 30px;
+}
+
+.plan h2 span { font-size: 80%; }
+.plan ul { font-size: 200%; }
+
+.tunedel del {position: relative; text-decoration: none;}
+.tunedel del::after { content:'' ; position:absolute; top: 60%; left: 0; right:0; border-bottom: 3px solid #F44; transform: rotate(-10deg);}
+.tunedel sup {color: #F44;}
+
+          .FS {
+              position: fixed !important;
+              left:0; width:100% !important;
+              top:0; height:100% !important;
+              background: white;
+              z-index: 1; /* in front of katex equations */
+          }
+          .FS svg {
+          }
+          
+
+
+.latex {color: #007;}
+.captain {font-size: 80%;}
+
+        </style>
+
+        <script src="deck-packed.js"></script>
+        <!--script src="extensions/slides.js"></script-->
+        <script>
+    includedeck([
+        "media/style.css",
+    ], {
+                AFTERINIT: function() {
+                    $(".hasSVG").each(function(i, e) {
+                        $(e).click(function() {
+                            $(e).toggleClass('FS');
+                        });
+                    });
+                },
+AFTERSMARTDOWN: function(){
+    $(".deck-container>.libyli li:not(li li):not(.notslide)").addClass("slide");
+    $("li.libyli>ul>li:not(.notslide)").addClass("slide");
+}});
+        </script>
+    </head>
+
+<body>
+
+<div class="deck-container">
+
+    <div class="deck-loading-splash" style="background: black; color: chartreuse;"><span class="vcenter" style="font-size: 30px; font-family: Arial; ">Please wait, while our marmots are preparing the hot chocolate…</span></div>
+
+<section class="smart">
+
+
+## <span class="var-title-br"></span> {image-full top-left darkened /black-bg /no-status /first-slide title-slide fancy-slide bot}
+<div class="img" style="background-image: url('media/fractal-cubes.jpg')" data-scale=""></div>
+
+- <span class="var-author"></span>
+- <span class="var-date"></span>
+- <span class="var-affiliation-br"></span>
+
+
+## <span class="var-title">TITLE</span> {#plan plan overview /with-ujm}
+- The Curse of Dimensionality
+- Ockham's Razor
+- Notions of Simplicity
+- Conclusion
+
+# The Curse of Dimensionality
+
+## The Curse of Dimensionality {image-full top-left darkened /black-bg /no-status fancy-slide bot tunedel}
+<div class="img" style="background-image: url('media/curse-clockwork.jpg')" data-attribution="https://www.flickr.com/photos/68244807@N00/16488393913/sizes/l/" data-attribution-content="CC by jsbanks42 (Flickr)" data-scale=""></div>
+
+- High-dimensionality <del>is</del><sup>can be</sup> a mess.
+
+
+
+## What is this Curse Anyway? {libyli}
+- Some definition:
+  - *Various phenomena that arise <br/>when analyzing and organizing data<br/> in high-dimensional spaces.* {no}
+- Term coined by Richard E. Bellman
+  - 1920 − 1984
+  - dynamic programming
+  - differential equations
+  - shortest path // Bellman-Ford algorithm
+- What is (not) the cause?
+  - not an intrinsic property of the data
+  - depends on the representation
+  - depends on how data is analyzed
+- {notes notslide}
+  - we'll see some example
+  - and that it impacts most a lot of things
+
+
+## Combinatorial Explosion {libyli}
+- Suppose
+  - you have $d$ entities
+  - each can be in $2$ states
+- Then
+  - there are $2^d$ combinations to consider/test/evaluate
+- Happens when considering
+  - all possible subsets of a set ($2^d$)
+  - all permutations of a list ($d!$)
+  - all affectations of entities to labels ($k^d$, with $k$ labels)
+
+@svg: curse-of-dim/subsets.svg 700px 150px
+
+
+## Regular Space Coverage
+- Analogous to combinatorial explosion, in continuous spaces
+- Happens when considering {next}
+  - histograms
+  - density estimation
+  - anomaly detection
+  - ...
+- @anim: #dim1 |#d1points |#dim2 |#d2x |#d2y |#d2grid |#d3x |#d3y |#d3z |#d3cube
+- @anim: .next
+
+@svg: curse-of-dim/covering.svg 800px 300px
+
+
+## In Modeling and Learning {libyli}
+@svg: curse-of-dim/overfitting.svg 300px 300px {floatright}
+
+- The world is complicated // or any object of interest
+  - state with a huge number of variables (dimensions)
+  - possibly noisy observations
+  - e.g. a 1M-pixel image has 3 million dimensions
+- Learning would need observations for each state
+  - it would require too many examples
+  - need for an “interpolation” procedure, to avoid overfitting
+  - @anim: .hasSVG | #points | #linear | #piecewise | #ok
+- Hughes phenomenon, 1968 paper (which is wrong, <a href="http://www.37steps.com/2322/hughes-phenomenon/">it seems</a>)
+  - *given a (small) number of training samples, additional feature measurements <br/> may reduce the performance of a statistical classifier{captain}* {no}
+
+
+
+
+
+## A Focus on Distances/Volumes
+- Considering a $d$ dimensional space
+- About volumes {slide libyli}
+  - volume of the cube:   $C_d(r) = (2 r)^d$
+  - volume of a sphere with radius $r$:   $S_d(r) = \frac{\pi^{d/2}}{\Gamma(\frac{d}{2} + 1)}r^d$
+    <br/> <span>($\Gamma$ is the continuous generalization of the factorial){captain}</span>
+  - ratio: $\frac{S_d(r)}{C_d(r)} \rightarrow 0$ <span>(linked to space coverage) {captain}</span> 
+- @anim: #dim2 | #dim1 |%dur:1000|#d1mask|%dur: |#dim3 |#dcorners
+
+@svg: curse-of-dim/volumes.svg 800px 200px
+
+## A Focus on Distances/Volumes (cont'd) {libyli}
+@svg: curse-of-dim/volumes.svg 800px 200px
+
+@svg: curse-of-dim/average-dist.svg 200px 200px {floatright}
+
+- About distances
+  - average (euclidean) distance between two random points?
+  - everything becomes almost **as** “far”
+- Happens when considering
+  - radial distributions <span>(multivariate normal, etc){captain}</span>
+  - k-nearest neighbors (hubiness problem)
+  - other distance-based algorithms
+
+
+
+
+## The Curse of Dimensionality {image-full top-left darkened /black-bg /no-status fancy-slide bot}
+<div class="img" style="background-image: url('media/curse-clockwork.jpg')" data-attribution="https://www.flickr.com/photos/68244807@N00/16488393913/sizes/l/" data-attribution-content="CC by jsbanks42 (Flickr)" data-scale=""></div>
+
+- Many things get degenerated with high dimensions
+- Problem of: approach + data representation
+- *We have to hope that there is no curse*
+
+
+
+
+# @copy: #plan
+
+
+## Ockham's Razor {image-full top-left darkened /black-bg /no-status fancy-slide top}
+<div class="img" style="background-image: url('simplicity/razor-brush.jpg')" data-attribution="https://www.flickr.com/photos/fixcinater/5475287408/sizes/o/" data-attribution-content="CC by Fixcinater (Flickr)" data-scale=""></div>
+- Shave unnecessary assumptions.
+
+## Ockham's Razor {libyli}
+- Term from 1852, in reference to Ockham (XIV<sup>th</sup>)
+- *lex parsimoniae*, law of parsimony
+- *Prefer the simplest hypothesis that fits the data.*// Among competing hypotheses, the one with the fewest assumptions should be selected
+- Formulations by Ockham, but also earlier and later
+- More a concept than a rule
+  - simplicity
+  - parsimony
+  - elegance
+  - shortness of explanation
+  - shortness of program (Kolmogorov complexity)
+  - falsifiability (sciencific method) // simple -> more cases -> easy to falsify
+- According to Jürgen Schmidhuber, *the appropriate mathematical theory of Occam's razor already exists, namely, Solomonoff's theory of optimal inductive inference.{slide}*
+
+
+# Notions of Simplicity // a tour, in learning mostly
+
+## Simplicity of Data: subspaces {libyli}
+- Data might be high-dimensional, but we have hope
+  - that there is a organization or regularity in the high-dimensionality
+  - that we can guess it
+  - or, that we can learn/find it
+- Approaches: dimensionality reduction, manifold learning
+  - PCA, kPCA, \*PCA, SOM, Isomap, GPLVM, LLE, NMF, … // (26 algorithms listed on wikipedia (Nonlinear dimensionality reduction), but not only that list, also (feature learning))
+- @anim: #manipoints |#manifold | -#manifold,#manipoints  |#facepoints |#facespaces | -#facepoints,#facespaces |#manistuff
+
+@svg: simplicity/manifolds-etc.svg 800px 300px
+
+
+## Simplicity of Data: compressibility
+<img class="kolmo" src="simplicity/rainbow-fractal.jpg"> </img>
+
+<img class="sparse floatright" src="simplicity/jpeg2000.jpg" width="200"> </img>
+
+- Idea
+  - data can be high dimensional but compressible
+  - i.e., there exist a compact representation
+- Program that generates the data<br/>(Kolmogorov complexity) {kolmo}
+- Sparse representations {sparse}
+  - wavelets (jpeg), fourier transform
+  - sparse coding, representation learning
+- Minimum description length {mdl}
+  - size of the “code” + size of the encoded data
+- @anim: .kolmo | .sparse | .mdl
+
+## Simplicity of Models: information criteria {libyli}
+- Used to select a model
+- Penalizes by the number $k$ of *free parameters*
+  - AIC (Aikake Information Criterion) // http://www4.ncsu.edu/~shu3/Presentation/AIC.pdf
+      - penalizes the Negative-Log-Likelihood by $k$
+  - BIC (Bayesian IC)
+      - penalizes the NLL by $k \log(n)$   (for $n$ observations)
+  - BPIC (Bayesian Predictive IC)
+  - DIC (Deviance IC) // compute easily from the MCMC simulation (use Expect instead of MLE)
+  - FIC (Focused IC)
+  - Hannan-Quinn IC
+  - TIC (Takeuchi IC)
+- Sparsity of the parameter vector ($l0$ norm)
+  - penalizes the number of non-zero parameters
+
+
+## Take-home Message {image-fit top-left darkened /black-bg /no-status /fancy-slide}
+<div class="img" style="background-image: url('media/take-home-cats.jpg')" data-attribution="https://www.flickr.com/photos/sometoast/4192895126/sizes/l" data-attribution-content="CC by someToast (Flickr)" data-scale=""></div>
+
+
+## Thank You!<br/><br/>Questions? {image-fit bottom-left darkened /black-bg /no-status /fancy-slide}
+<div class="img" style="background-image: url('media/voodoo.jpg')" data-attribution="https://www.flickr.com/photos/sarawerne/4975279002/sizes/l" data-attribution-content="CC by tech no logic (Flickr)" data-scale=""></div>
+
+
+
+
+# That's It!<br/>Questions? {deck-status-fake-end}
+
+# Attributions
+
+## jared {image-full bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('media/fractal-cubes.jpg')" data-attribution="https://www.flickr.com/photos/generated/6313491064/sizes/l/" data-attribution-content="CC by jared (Flickr)" data-scale=""></div>
+
+## jsbanks42 {image-full bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('media/curse-clockwork.jpg')" data-attribution="https://www.flickr.com/photos/68244807@N00/16488393913/sizes/l/" data-attribution-content="CC by jsbanks42 (Flickr)" data-scale=""></div>
+
+## tech no logic {image-full bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('media/voodoo.jpg')" data-attribution="https://www.flickr.com/photos/sarawerne/4975279002/sizes/l" data-attribution-content="CC by tech no logic (Flickr)" data-scale=""></div>
+
+## Fixcinater {image-full bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('simplicity/razor-brush.jpg')" data-attribution="https://www.flickr.com/photos/fixcinater/5475287408/sizes/o/" data-attribution-content="CC by Fixcinater (Flickr)" data-scale=""></div>
+
+## Arenamontanus {image-fit bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('simplicity/rainbow-fractal.jpg')" data-attribution="https://www.flickr.com/photos/arenamontanus/3380622371/sizes/l" data-attribution-content="CC by Arenamontanus (Flickr)" data-scale=""></div>
+
+## Wikipedia {image-fit bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('simplicity/jpeg2000.jpg')" data-attribution="https://commons.wikimedia.org/wiki/File:Jpeg2000_2-level_wavelet_transform-lichtenstein.png" data-attribution-content="CC (wikipedia)" data-scale=""></div>
+
+## someToast {image-fit bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('media/take-home-cats.jpg')" data-attribution="https://www.flickr.com/photos/sometoast/4192895126/sizes/l" data-attribution-content="CC by someToast (Flickr)" data-scale=""></div>
+
+
+
+</section>
+
+
+    <p class="deck-status" data-progress-size=": spe.top(10, 585) ; bottom: slide.top" style="z-index: 0; color: #339; background: #EEE;"> <span class="deck-status-current"></span> / <span class="deck-status-total"></span> − <span class="var-author">will be replaced by the author</span> − <span class="var-title">will be replaced by the title</span></p>
+
+    <a data-progress-size=": spe.top(15, 555); height: 45*designRatio; left: slide.right - 70*designRatio; width: 70*designRatio" class="ccby" href="http://en.wikipedia.org/wiki/Creative_Commons_license" title="This work is under CC-BY licence." target="_blank"></a>
+
+    <a class="ujm" data-progress-size=": spe.top(15, 515); height: 65*designRatio; left: slide.left; width: 130*designRatio" target="_blank"></a> <!-- shown only if with-ujm is set on the container -->
+    <a class="hcurien" data-progress-size=": spe.top(15, 470); height: 105*designRatio; left: slide.right - 160*designRatio; width: 150*designRatio" target="_blank"></a> <!-- shown only if with-ujm is set on the container -->
+
+</div>
+</body>
+</html>
