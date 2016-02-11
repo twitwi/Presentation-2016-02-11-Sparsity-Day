@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+            
+        <title>Sparsity in Probabilistic Models</title>
+
+<!--
+This talk will explore how sparsity can be formulated, embedded and implemented in probabilistic models. We will start by drawing a parallel between classical optimization problems and probabilistic data modeling. Building on the formulation of sparsity in (convex) optimization, we will see that the regularization terms can be seen as a prior over the model parameters. We will then explore a few additional forms of priors that are used to formulate sparsity in probabilistic models.
+-->
+
+        <meta name="author" content="Rémi Emonet">
+        <meta name="venue" content="Workshop on Sparsity">
+        <meta name="date" content="2016-02-11">
+        <meta name="affiliation" content="Université Jean Monnet  Laboratoire Hubert Curien">
+ 
+        <style type="text/css">
+@keyframes opacity-loop {
+    from {opacity: 0;}
+    to {opacity: 1;}
+}
+@keyframes blur-loop {
+    from {filter: blur(2px);}
+    to {opacity: blur(0.2px);}
+}
+.coocoocool::after {
+  content: "?";
+  animation: opacity-loop 2s ease-in-out 0s infinite alternate;
+}
+
+.deck-container.black-bg { background: black !important; }
+.deck-container:not(.black-bg) { transition: 1s ease-in background; background: default; }
+
+.linearregtitle {filter: blur(2px);}
+.bay {
+  animation: blur-loop 2s ease-in-out 0s infinite alternate;
+}
+.go {transition: 1s filter;}
+
+.title-slide h2, .title-slide ul {
+   box-shadow: 0px 0px 20px rgba(255,255,255, 0.8);
+}
+.fancy-slide h2, .fancy-slide ul {
+   color: white;
+}
+.fancy-slide ul {
+   position: absolute; left: 30px; bottom: 30px;
+   padding: 0.5em; background: rgba(0,0,0,0.8);
+   border-radius: 3px;
+   list-style: none !important;
+}
+.title-slide ul {
+   position: absolute; right: 30px; left: auto; bottom: 30px;
+}
+
+.plan h2 span { font-size: 80%; }
+.plan ul { font-size: 120%; }
+
+
+          .FS {
+              position: fixed !important;
+              left:0; width:100% !important;
+              top:0; height:100% !important;
+              background: white;
+              z-index: 1; /* in front of katex equations */
+          }
+          .FS svg {
+          }
+
+.unpadtop50 {padding-top: -50px;}
+.latex {color: #007;}
+.captain {font-size: 80%;}
+
+        </style>
+
+        <script src="deck-packed.js"></script>
+        <!--script src="extensions/slides.js"></script-->
+        <script>
+    includedeck([
+        "media/style.css",
+    ], {
+                AFTERINIT: function() {
+                    $(".hasSVG").each(function(i, e) {
+                        $(e).click(function() {
+                            $(e).toggleClass('FS');
+                        });
+                    });
+                },
+AFTERSMARTDOWN: function(){
+    $(".deck-container>.libyli li:not(li li):not(.notslide)").addClass("slide");
+    $("li.libyli>ul>li:not(.notslide)").addClass("slide");
+}});
+        </script>
+    </head>
+
+<body>
+
+<div class="deck-container">
+
+    <div class="deck-loading-splash" style="background: black; color: chartreuse;"><span class="vcenter" style="font-size: 30px; font-family: Arial; ">Please wait, while our marmots are preparing the hot chocolate…</span></div>
+
+<section class="smart">
+
+
+## <span class="var-title-br"></span> {image-full top-left darkened /black-bg /no-status /first-slide title-slide fancy-slide}
+<div class="img" style="background-image: url('media/fractal-cubes.jpg')" data-scale=""></div>
+
+- <span class="var-author"></span>
+- <span class="var-date"></span>
+- <span class="var-affiliation-br"></span>
+
+
+## <span class="var-title">TITLE</span> {#plan plan overview /with-ujm}
+- Least Square Linear Regression:<br/> a Probabilistic View
+- Regularized Least Square Regression:<br/> a Bayesian View
+- Mixture Models and Alternatives to Model Selection
+- Learning Sparse Matrices // http://www.jmlr.org/papers/volume12/griffiths11a/griffiths11a.pdf
+- Conclusion
+
+
+# Linear Regression: <br/> a Probabilistic View {linearregtitle}
+
+## Linear Regression: a Probabilistic Model
+@svg: bayesian-least-square/linear-gaussian-noise.svg 300 300 {floatright}
+
+- We observe $S = \left\\{ (\mathbf{x}_i, y_i )\right\\} \_{i=1}^n $ {go linearregtitle}
+- We model $y_i =\; \mathbf{w}^T\mathbf{x}_i + \epsilon_i$, <br/>with $\epsilon_i \sim \mathcal{N}(0, \sigma^2)$ {go linearregtitle next1}
+  - equivalent to: $y_i \sim \mathcal{N}(\mathbf{w}^T\mathbf{x}_i, \sigma^2)$
+  - NB: as the noise was independent,<br/> $y_i$ are independent, given $\mathbf{w}{}$
+- The parameters of the model are $\mathbf{w}{}$ {go linearregtitle}
+- @anim: %-class:linearregtitle:.go
+- @anim: .floatright |#linear |#gauss1 |#gauss2 |#gradiented
+- @anim: .next1 li
+- The likelihood is $L(\mathbf{w}, S) = p(S | \mathbf{w})$ {slide libyli}
+  - from the Independence $L(\mathbf{w}, S) = \prod\_{i=1}^n p(\mathbf{x}_i, \mathbf{y}_i | \mathbf{w})$
+  - from the Normal distribution: $L(\mathbf{w}, S) = \prod\_{i=1}^n \frac{1}{\sigma \sqrt{2\pi}} e^\frac{- (y_i - \mathbf{w}^T\mathbf{x}_i)^2}{2 \sigma^2} {}$
+
+## Linear Regression: maximum likelihood
+- Reminder
+  - {no}
+      - likelihood: $L(\mathbf{w}, S) = \prod\_{i=1}^n \frac{1}{\sigma \sqrt{2\pi}} \exp\left(\frac{- (y_i - \mathbf{w}^T\mathbf{x}_i)^2}{2 \sigma^2}\right) {}$
+- We want to maximize the likelihood, over $\mathbf{w}{}$, {libyli}
+  - we will rather consider the log-likelihood {libyli}
+      - $\log L(\mathbf{w}, S) = \sum\_{i=1}^n \left( -\log(\sigma \sqrt{2\pi}) + \frac{- (y_i - \mathbf{w}^T\mathbf{x}_i)^2}{2 \sigma^2} \right)$
+      - $\log L(\mathbf{w}, S) = - n \log(\sigma \sqrt{2\pi}) + \frac{1}{2 \sigma^2} \sum\_{i=1}^n - (y_i - \mathbf{w}^T\mathbf{x}_i)^2 $
+  - we have {libyli}
+      - $\arg\max_w \; L(\mathbf{w}, S) = \arg\max_w \; \log L(\mathbf{w}, S)$
+      - $\arg\max_w \; L(\mathbf{w}, S) = \arg\max_w \; \frac{1}{2 \sigma^2} \sum\_{i=1}^n - (y_i - \mathbf{w}^T\mathbf{x}_i)^2 $
+      - $\arg\max_w \; L(\mathbf{w}, S) = \arg\min_w \; \sum\_{i=1}^n (y_i - \mathbf{w}^T\mathbf{x}_i)^2 $
+
+## Linear Regression: summary{libyli}
+- Supposing a Gaussian noise around the linear predictor $\mathbf{w}{}$
+- These are equivalent point of views to find $\mathbf{w}{}$
+  - maximizing the likelihood $L(\mathbf{w}, S) = \prod\_{i=1}^n p(\mathbf{x}_i, \mathbf{y}_i | \mathbf{w})$
+  - minimizing $\frac12 \sum\_{i=1}^n (y_i - \mathbf{w}^T\mathbf{x}_i)^2 $
+  - solving the least square linear regression problem
+- NB: the noise variance $\sigma^2$ does not appear, cool<span>! {coocoocool}</span>
+
+
+# <span>Regularized Least Square:{linearregtitle}</span><br/> <span>a Bayesian{bay}</span> <span>View{linearregtitle}</span>
+
+## Should we really maximize the likelihood? {libyli}
+- We have observations ($S$) and <br/> we want to find the best parameters $\mathbf{w}{}$
+- We actually want to find{libyli}
+  - the parameters that are the most supported by the observations
+  - i.e., the parameters that are most likely, knowing the observations
+  - i.e., $\arg\max_w \; p(\mathbf{w} | S)$ <span>    (reminder: the likelihood is $L(\mathbf{w}, S) = p(S | \mathbf{w})$) {captain}</span>
+- How is it related? {libyli}
+  - Bayes:   $ p(A|B) p(B) = p(A \wedge B) = p(B \wedge A) = p(B|A) p(A) {captain}$
+  - Bayes, v2:   $ p(A|B) = \frac{p(B|A) p(A)}{p(B)} {}$
+  - so:   $p(\mathbf{w} | S) = \frac{p(S | \mathbf{w}) p(\mathbf{w})}{p(S)} {}$
+
+## Bayesian Posterior Optimization {libyli}
+- We have observations $S$, we want the best parameters $\mathbf{w}{}$ {captain}
+- We want to {libyli}
+  - maximize: $p(\mathbf{w} | S) = \frac{p(S | \mathbf{w}) p(\mathbf{w})}{p(S)} {}$
+  - i.e., maximize: $p(S | \mathbf{w}) p(\mathbf{w})$    <span>(as $p(S)$ does not depend en $\mathbf{w}{}$) {captain}</span>
+  - i.e, minimize: $- \log(p(S | \mathbf{w}) p(\mathbf{w}))$    <span>(as $\log$ is increasing) {captain}</span>
+  - i.e, minimize: $-\log(p(S | \mathbf{w})) -\log(p(\mathbf{w}))$
+  - i.e, minimize: $-\log L(\mathbf{w}, S) -\log(p(\mathbf{w}))$
+- One (possible) interpretation {slide}
+  - we want to optimize the (negative-log)-likelihood (as in MLE) <br/> but **penalized** by the (negative-log)-prior
+
+# And Ockham? <br/> (aside on the board) // based on the broadness of the prior etc
+
+## From Prior to Regularization
+- Bayesian opt., minimize:   $-\log L(\mathbf{w}, S) -\log(p(\mathbf{w}))$ {captain}
+- Back to a Gaussian noise $\sigma^2$ around the linear predictor {libyli}
+  - minimize:   $\frac{1}{2 \sigma^2} \sum\_{i=1}^n (y_i - \mathbf{w}^T\mathbf{x}_i)^2  - \log(p(\mathbf{w}))$
+  - i.e., minimize:   $\frac{1}{2} \sum\_{i=1}^n (y_i - \mathbf{w}^T\mathbf{x}_i)^2  - \sigma^2\cdot \log(p(\mathbf{w}))$
+- We can identify {slide}
+  - the regularization for regularized the least square
+  - and, $- \sigma^2\cdot \log(p(\mathbf{w}))$   <span>(the obs. noise variance times the log-prior) {captain}</span>
+  - NB: $\log p$ is negative, so it is really a penalty {captain}
+
+## Priors and (some) $L_p$ Norms {dense libyli}
+@svg: bayesian-least-square/norm-lap-1d.svg 100px 100px {floatright clearboth}
+
+@svg: bayesian-least-square/norm-lap-2d.svg 100px 100px {floatright clearboth}
+
+@svg: bayesian-least-square/generalized-normal.svg 100px 100px {floatright clearboth}
+
+- Regularization is identified to $- \sigma^2\cdot \log(p(\mathbf{w}))$ {captain} // NB the isotropic normal is easier seen decomposed (TODO)
+- Isotropic Normal prior, i.e.:   $ \mathbf{w} \sim \mathcal{N}\left(0, \sigma_w^2 \mathbf{I} \right)$
+  - $\log(p(\mathbf{w})) = cst + \log \exp\left(- \frac{\mathbf{w}^T\mathbf{w}}{2 \sigma_w^2}\right) $
+  - i.e., $- \log(p(\mathbf{w})) = \frac{\mathbf{w}^T\mathbf{w}}{2 \sigma_w^2} - cst  =  \frac{\left\| \mathbf{w} \right\|_2^2}{2 \sigma_w^2} - cst$
+  - Regularizer: $\frac{\sigma^2}{2 \sigma_w^2} \left\| \mathbf{w} \right\|_2^2 $
+  - can use generalized gaussian to remove the square? {comment}
+- Laplace prior, i.e.:   $ \mathbf{w_j} \sim \mathcal{Laplace}\left(0, b_w\right)$
+  - $\log(p(\mathbf{w})) = cst + \sum_j \log \exp\left(- \frac{\left|\mathbf{w_j}\right|}{b_w}\right) $
+  - Regularizer: $\frac{\sigma^2}{b_w} \left\| \mathbf{w} \right\|_1 $
+- Generalized Normal distr. (v1):  $p(x | \mu, \alpha, \beta) = \frac{\beta}{2\alpha\Gamma(1/\beta)} \; \exp\left(-\frac{\left|x-\mu\right|^\beta}{\alpha^\beta}\right) {}$ 
+  - Regularizer: $\frac{\sigma^2}{\alpha^\beta} \left\| \mathbf{w} \right\|_\beta^\beta $
+
+# Mixture Models and Alternatives to Model Selection (skipped)
+
+<!-- UNPRESENTED
+
+## Gaussian Mixture Model (1D)
+
+- Density: $p(x | \theta) = \sum_{k=1}^K w\_k \;\mathcal{N}(x|\mu\_k,\sigma\_k^2)$ {slide}
+- Parameters: $\theta = (w\_k, \mu\_k, {\sigma\_k}^2)_{k=1..K} {}$ {slide}
+
+@svg: gmm/two-gaussians-gmm.svg 800px 300px {unpadtop50}
+
+
+## Sampling from a 2D GMM
+<img class="floatright" src="gmm2d/difficult-original.png" height="300px"/>
+
+-  {no dense}
+  - Density: $p(x | \theta) = \sum_{k=1}^K w\_k \;\mathcal{N}(x|\mu\_k,\sigma\_k)$
+  - Parameters: $\theta = (w\_k, \mu\_k, \sigma\_k)_{k=1..K} {}$
+- For each point $i$ to be generated {clearboth}
+  - draw a **component index** (i.e., a color): $z_i \sim Categorical(w)$
+  - draw its **position** from the component: $x\_i \sim  \mathcal{N}(x|\mu\_{z\_i},\sigma\_{z_i})$
+
+## Only Positions are Observed {pfree}
+<img class="floatright" src="gmm2d/difficult-raw.png" width="400px"/>
+<img class="floatright" src="gmm2d/difficult-original.png" width="400px"/>
+
+- For each point $i$ {clearboth}
+  - draw a component/color: $z_i \sim Categorical(w)$
+  - draw a position: $x\_i \sim  \mathcal{N}(x|\mu\_{z\_i},\sigma\_{z_i})$
+- Finding $z$ seems impossible, <br/> finding the “best” $\theta$ might be feasible? {slide}
+
+
+## GMM: Probabilistic Graphical Model
+@svg: graphical-models-dpgmm/dp-finite-no-prior.svg 800px 200px
+
+- Renamed
+  - $w$ &rarr; $\beta$ (vector of component weights)
+  - $(\mu\_k, \sigma\_k)$ &rarr; $\phi_k$ (parameters of component $k$)
+- Reminder: for each point $i$ {clearboth}
+  - draw a component/color: $z_i \sim Categorical(\beta)$
+  - draw a position: $x\_i \sim \mathcal{N}(x|\phi\_{z\_i})$
+
+
+## Selecting the Number of Components {libyli}
+- How to choose $K$, the number of components {captain}
+- First approach: model selection
+  - try with different values of $K$
+  - use an information criterion (AIC, BIC, ...)
+- Integrated approach
+  - optimize a model that include all possible numbers of components
+  - need a (good) prior on all possible $K$
+  - need it to be possible to optimize
+
+## From GMM to DPGMM 
+
+@svg: graphical-models-dpgmm/dp-finite-split.svg 200px 200px {floatright light}
+
+@svg: graphical-models-dpgmm/dp-split.svg 200px 200px {floatright other clearboth}
+
+- Dirichlet Process GMM
+  - a GMM with an infinity of components
+  - with a proper prior
+  - (cannot use EM for inference (infinite vectors)) {captain}
+
+## Dirichlet Process and Stick Breaking {libyli}
+- Dirichlet Process
+  - infinite mixture
+  - prior on an infinite vector of weights
+- Stick breaking construction prior, <br/>from the Beta distribution
+
+@svg: sparsity-probamod/Beta_distribution_pdf.svg 800px 300px {floatright}
+
+
+## What Does the DP Prior Look Like {libyli}
+- We'd like to see the probability of having a given number components, easy!
+- The number of component is infinite...
+- The number of “useful” components is not!
+
+@svg: sparsity-probamod/stick-breaking.svg 800px 300px {slide}
+
+-->
+
+
+# Learning Sparse Matrices (skipped)
+
+
+## Take-home Message {image-fit top-left darkened /black-bg /no-status /fancy-slide}
+<div class="img" style="background-image: url('media/take-home-cats.jpg')" data-attribution="https://www.flickr.com/photos/sometoast/4192895126/sizes/l" data-attribution-content="CC by someToast (Flickr)" data-scale=""></div>
+
+
+# That's It!<br/>Questions? {deck-status-fake-end}
+
+# Attributions
+
+## jared {image-full bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('media/fractal-cubes.jpg')" data-attribution="https://www.flickr.com/photos/generated/6313491064/sizes/l/" data-attribution-content="CC by jared (Flickr)" data-scale=""></div>
+
+## someToast {image-fit bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('media/take-home-cats.jpg')" data-attribution="https://www.flickr.com/photos/sometoast/4192895126/sizes/l" data-attribution-content="CC by someToast (Flickr)" data-scale=""></div>
+
+## Wikipedia {image-fit bottom-left darkened /black-bg /no-status}
+<div class="img" style="background-image: url('bayesian-least-square/generalized-normal.svg')" data-attribution="https://en.wikipedia.org/wiki/Generalized_normal_distribution#/media/File:Generalized_normal_densities.svg" data-attribution-content="CC (wikipedia)" data-scale=""></div>
+
+
+
+</section>
+
+
+    <p class="deck-status" data-progress-size=": spe.top(10, 585) ; bottom: slide.top" style="z-index: 0; color: #339; background: #EEE;"> <span class="deck-status-current"></span> / <span class="deck-status-total"></span> − <span class="var-author">will be replaced by the author</span> − <span class="var-title">will be replaced by the title</span></p>
+
+    <a data-progress-size=": spe.top(15, 555); height: 45*designRatio; left: slide.right - 70*designRatio; width: 70*designRatio" class="ccby" href="http://en.wikipedia.org/wiki/Creative_Commons_license" title="This work is under CC-BY licence." target="_blank"></a>
+
+    <a class="ujm" data-progress-size=": spe.top(15, 515); height: 65*designRatio; left: slide.left; width: 130*designRatio" target="_blank"></a> <!-- shown only if with-ujm is set on the container -->
+    <a class="hcurien" data-progress-size=": spe.top(15, 470); height: 105*designRatio; left: slide.right - 160*designRatio; width: 150*designRatio" target="_blank"></a> <!-- shown only if with-ujm is set on the container -->
+
+</div>
+</body>
+</html>
